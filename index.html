@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>Vue 點餐系統</title>
+  <style>
+    body  { font-family: sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; background: #faf6f0; }
+    h1    { color: #c84b2f; }
+    .layout { display: grid; grid-template-columns: 1fr 280px; gap: 20px; }
+
+    /* 菜單 */
+    .menu-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px; margin: 8px 0;
+      background: white; border: 1px solid #ddd; border-radius: 8px;
+    }
+    .menu-item:hover { border-color: #c84b2f; }
+    .price { color: #c84b2f; font-weight: bold; }
+    .btn-add {
+      padding: 5px 14px; background: #c84b2f; color: white;
+      border: none; border-radius: 6px; cursor: pointer;
+    }
+    .btn-add:hover { background: #9b3520; }
+
+    /* 購物車 */
+    .cart {
+      background: white; border: 1px solid #ddd; border-radius: 12px;
+      padding: 16px; position: sticky; top: 20px;
+    }
+    .cart h2 { margin-top: 0; color: #2a1f14; }
+    .cart-item { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; border-bottom: 1px dashed #eee; }
+    .total { font-size: 20px; font-weight: bold; color: #c84b2f; margin-top: 12px; }
+    .btn-order {
+      width: 100%; padding: 10px; margin-top: 10px;
+      background: #2a1f14; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 15px;
+    }
+    .empty { color: #aaa; text-align: center; padding: 20px 0; }
+
+    /* 分類標籤 */
+    .tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .tab {
+      padding: 5px 14px; border: 1px solid #ddd; border-radius: 99px;
+      background: white; cursor: pointer; font-size: 13px;
+    }
+    .tab.active { background: #2a1f14; color: white; border-color: #2a1f14; }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <h1>🍜 阿龍小吃店</h1>
+
+  <div class="layout">
+    <!-- 左側：菜單 -->
+    <div>
+      <!-- 分類篩選 -->
+      <div class="tabs">
+        <div
+          v-for="cat in categories"
+          :key="cat"
+          class="tab"
+          :class="{ active: activeCategory === cat }"
+          @click="activeCategory = cat"
+        >{{ cat }}</div>
+      </div>
+
+      <!-- 菜單列表 -->
+      <div
+        v-for="item in filteredMenu"
+        :key="item.id"
+        class="menu-item"
+      >
+        <span>{{ item.emoji }} {{ item.name }}</span>
+        <span class="price">${{ item.price }}</span>
+        <button class="btn-add" @click="addToCart(item)">加入</button>
+      </div>
+    </div>
+
+    <!-- 右側：購物車 -->
+    <div class="cart">
+      <h2>🛒 訂單明細</h2>
+
+      <p class="empty" v-if="cart.length === 0">尚未點餐</p>
+
+      <div v-for="item in cart" :key="item.id" class="cart-item">
+        <span>{{ item.name }}</span>
+        <span>× {{ item.qty }}</span>
+        <span>${{ item.price * item.qty }}</span>
+      </div>
+
+      <div v-if="cart.length > 0">
+        <div class="total">合計：${{ totalAmount }}</div>
+        <button class="btn-order" @click="placeOrder">送出訂單</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 引入 Vue -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script>
+Vue.createApp({
+  data() {
+    return {
+      activeCategory: '全部',
+      cart: [],   // [{ id, name, emoji, price, qty }]
+
+      menu: [
+        { id: 1, category: '麵飯', emoji: '🍜', name: '滷肉飯',  price: 50  },
+        { id: 2, category: '麵飯', emoji: '🍝', name: '乾麵',    price: 55  },
+        { id: 3, category: '麵飯', emoji: '🍲', name: '牛肉麵',  price: 130 },
+        { id: 4, category: '小菜', emoji: '🥚', name: '滷蛋',    price: 20  },
+        { id: 5, category: '小菜', emoji: '🥬', name: '燙青菜',  price: 30  },
+        { id: 6, category: '湯品', emoji: '🍥', name: '貢丸湯',  price: 35  },
+        { id: 7, category: '飲料', emoji: '🧋', name: '紅茶',    price: 25  },
+      ]
+    }
+  },
+
+  computed: {
+    // 取得所有分類（不重複）
+    categories() {
+      const cats = this.menu.map(item => item.category)
+      return ['全部', ...new Set(cats)]
+    },
+
+    // 根據選擇的分類篩選菜單
+    filteredMenu() {
+      if (this.activeCategory === '全部') return this.menu
+      return this.menu.filter(item => item.category === this.activeCategory)
+    },
+
+    // 計算合計金額
+    totalAmount() {
+      return this.cart.reduce((sum, item) => sum + item.price * item.qty, 0)
+    }
+  },
+
+  methods: {
+    // 加入購物車（已存在則數量+1）
+    addToCart(menuItem) {
+      const existing = this.cart.find(c => c.id === menuItem.id)
+      if (existing) {
+        existing.qty++
+      } else {
+        this.cart.push({ ...menuItem, qty: 1 })
+      }
+    },
+
+    // 送出訂單
+    placeOrder() {
+      alert('訂單已送出！合計 $' + this.totalAmount)
+      this.cart = []   // 清空購物車
+    }
+  }
+
+}).mount('#app')
+</script>
+
+</body>
+</html>
